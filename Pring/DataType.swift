@@ -117,15 +117,17 @@ public enum DataType {
                 self = .geoPoint(key, value, value)
                 return
             }
-        case is [File]:
-            if let value: [File] = value as? [File] {
-                self = .files(key, value.map { return $0.value as! [AnyHashable: String] }, value)
-                return
-            }
         case is [Any]:
-            if let value: [Any] = value as? [Any] {
-                self = .array(key, value, value)
-                return
+            if type(of: value) == [File].self {
+                if let value: [File] = value as? [File] {
+                    self = .files(key, value.map { return $0.value as! [AnyHashable: String] }, value)
+                    return
+                }
+            } else {
+                if let value: [Any] = value as? [Any] {
+                    self = .array(key, value, value)
+                    return
+                }
             }
         case is Set<String>:
             if let value: Set<String> = value as? Set<String> {
