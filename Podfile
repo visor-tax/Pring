@@ -4,7 +4,7 @@
 target 'Pring' do
   use_frameworks!
 
-  pod 'Firebase/Core'
+  pod 'Firebase', '~> 5.6.0'
   pod 'Firebase/Firestore'
   pod 'Firebase/Storage'
 
@@ -16,8 +16,6 @@ end
 
 target 'Sample' do
   use_frameworks!
+  pod 'Pring', :path => './'
 
-  pod 'Firebase/Core'
-  pod 'Firebase/Firestore'
-  pod 'Firebase/Storage'
 end
