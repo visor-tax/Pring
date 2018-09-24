@@ -53,9 +53,9 @@ class PringTests: XCTestCase {
         let expectation: XCTestExpectation = XCTestExpectation(description: "Test Files")
         let document: MultipleFilesDocument = MultipleFilesDocument()
 
-        document.file0 = File(data: UIImagePNGRepresentation(MultipleFilesDocument.image())!, mimeType: .png)
-        document.file1 = File(data: UIImagePNGRepresentation(MultipleFilesDocument.image())!, mimeType: .png)
-        document.file2 = File(data: UIImagePNGRepresentation(MultipleFilesDocument.image())!, mimeType: .png)
+        document.file0 = File(data: MultipleFilesDocument.image().pngData()!, mimeType: .png)
+        document.file1 = File(data: MultipleFilesDocument.image().pngData()!, mimeType: .png)
+        document.file2 = File(data: MultipleFilesDocument.image().pngData()!, mimeType: .png)
 
         let tasks = document.save { (ref, error) in
             MultipleFilesDocument.get(ref!.documentID, block: { (document, error) in
@@ -113,7 +113,7 @@ class PringTests: XCTestCase {
 
         let document: MultipleFilesDocument = MultipleFilesDocument()
         let item: MultipleFilesNestedItem = MultipleFilesNestedItem()
-        item.file = File(data: UIImagePNGRepresentation(MultipleFilesNestedItem.image())!, mimeType: .png)
+        item.file = File(data: MultipleFilesNestedItem.image().pngData()!, mimeType: .png)
         document.files.insert(item)
         let id: String = item.id
 
@@ -146,7 +146,7 @@ class PringTests: XCTestCase {
 
         let document: MultipleFilesDocument = MultipleFilesDocument()
         let item: MultipleFilesShallowPathItem = MultipleFilesShallowPathItem()
-        item.file = File(data: UIImagePNGRepresentation(MultipleFilesShallowPathItem.image())!, mimeType: .png)
+        item.file = File(data: MultipleFilesShallowPathItem.image().pngData()!, mimeType: .png)
         document.referenceShallowFile.set(item)
 
         document.save { (ref, error) in
@@ -178,7 +178,7 @@ class PringTests: XCTestCase {
 
         let document: MultipleFilesDocument = MultipleFilesDocument()
         let item: MultipleFilesShallowPathItem = MultipleFilesShallowPathItem()
-        item.file = File(data: UIImagePNGRepresentation(MultipleFilesShallowPathItem.image())!, mimeType: .png)
+        item.file = File(data: MultipleFilesShallowPathItem.image().pngData()!, mimeType: .png)
         document.relationShallowFile.set(item)
 
         document.save { (ref, error) in
@@ -210,7 +210,7 @@ class PringTests: XCTestCase {
 
         let document: MultipleFilesDocument = MultipleFilesDocument()
         let item: MultipleFilesShallowPathItem = MultipleFilesShallowPathItem()
-        item.file = File(data: UIImagePNGRepresentation(MultipleFilesShallowPathItem.image())!, mimeType: .png)
+        item.file = File(data: MultipleFilesShallowPathItem.image().pngData()!, mimeType: .png)
         document.shallowFiles.insert(item)
         let id: String = item.id
 
@@ -238,6 +238,20 @@ class PringTests: XCTestCase {
         self.wait(for: [expectation], timeout: 10)
     }
 
+    func testDocumentMemoryLeak() {
+
+        weak var weakDocument: TestDocument?
+
+        do {
+            let document: TestDocument = TestDocument()
+            document.refItem.parent = document
+            weakDocument = document
+            document.rawValue
+        }
+
+        XCTAssertNil(weakDocument)
+    }
+
     func testDocumentMemory() {
         let expectation: XCTestExpectation = XCTestExpectation(description: "Test File")
         weak var weakDocument: TestDocument?
@@ -247,7 +261,7 @@ class PringTests: XCTestCase {
             weakDocument = document
             document.save({ (ref, error) in
                 TestDocument.get(ref!.documentID, block: { (document, error) in
-                    let file1: File = File(data: UIImagePNGRepresentation(TestDocument.image1())!, mimeType: .png)
+                    let file1: File = File(data: TestDocument.image1().pngData()!, mimeType: .png)
                     document?.file = file1
                     document?.update({ (error) in
                         TestDocument.get(ref!.documentID, block: { (document, error) in
@@ -255,6 +269,7 @@ class PringTests: XCTestCase {
                         })
                     })
                 })
+                expectation.fulfill()
             })
         }
 
@@ -271,7 +286,7 @@ class PringTests: XCTestCase {
             weakDocument = document
             document.save({ (ref, error) in
                 TestOptionalDocument.get(ref!.documentID, block: { (document, error) in
-                    let file1: File = File(data: UIImagePNGRepresentation(TestDocument.image1())!, mimeType: .png)
+                    let file1: File = File(data: TestDocument.image1().pngData()!, mimeType: .png)
                     document?.file = file1
                     document?.update({ (error) in
                         TestOptionalDocument.get(ref!.documentID, block: { (document, error) in
@@ -403,6 +418,34 @@ class PringTests: XCTestCase {
                             XCTAssertEqual(items.count, 1)
                             expectation.fulfill()
                         }).get()
+                    })
+                })
+            })
+        }
+        self.wait(for: [expectation], timeout: 20)
+    }
+
+    func testReference() {
+        let expectation: XCTestExpectation = XCTestExpectation(description: "Test Reference")
+        let object: TestDocument = TestDocument()
+        let item: ReferenceItem = ReferenceItem()
+
+        object.refItem.set(item)
+        object.save { (ref, _) in
+            TestDocument.get(ref!.documentID, block: { (object, _) in
+                XCTAssertEqual(object?.refItem.id!, item.id)
+                let newItem: ReferenceItem = ReferenceItem()
+                object?.refItem.set(newItem)
+                object?.update({ (_) in
+                    TestDocument.get(ref!.documentID, block: { (object, _) in
+                        XCTAssertEqual(object?.refItem.id!, newItem.id)
+                        object?.delete({ (_) in
+                            newItem.delete({ (_) in
+                                item.delete({ (_) in
+                                    expectation.fulfill()
+                                })
+                            })
+                        })
                     })
                 })
             })

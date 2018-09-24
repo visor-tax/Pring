@@ -47,6 +47,12 @@ Please report issues [here](https://github.com/1amageek/Pring/issues/new)
 ☑️ You can easily associate subcollections.<br>
 ☑️ Support GeoPoint.<br>
 
+## Design 💻
+
+[Firestore Database Design](https://speakerdeck.com/1amageek/firestore-database-design)
+
+If you are going to use `Firestore` and make products, I recommend you to read it.
+
 ## TODO ✅
 
 ### 
@@ -156,7 +162,7 @@ class User: Object {
     dynamic var float: Double                       = Double.infinity
     dynamic var date: Date                          = Date(timeIntervalSince1970: 100)
     dynamic var geoPoint: GeoPoint                  = GeoPoint(latitude: 0, longitude: 0)
-    dynamic var dictionary: [AnyHashable: Any]      = ["key": "value"]    
+    dynamic var dictionary: [String: Any]      = ["key": "value"]    
     dynamic var string: String                      = "string"
     
     let group: Reference<Group>                         = .init()
