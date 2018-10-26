@@ -11,6 +11,8 @@ import FirebaseFirestore
 import FirebaseStorage
 
 open class Object: NSObject, Document {
+    
+    public static var db: Firestore!
 
     open class var modelVersion: Int {
         return 1
@@ -25,10 +27,6 @@ open class Object: NSObject, Document {
     }
 
     open class var reference: CollectionReference {
-        let db = Firestore.firestore()
-        let settings = db.settings
-        settings.areTimestampsInSnapshotsEnabled = true
-        db.settings = settings
         return db.collection(self.path)
     }
 
