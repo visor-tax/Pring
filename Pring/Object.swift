@@ -10,10 +10,10 @@
 import FirebaseFirestore
 import FirebaseStorage
 
+public var PringDB: Firestore!
+
 open class Object: NSObject, Document {
     
-    public static var db: Firestore!
-
     open class var modelVersion: Int {
         return 1
     }
@@ -27,7 +27,7 @@ open class Object: NSObject, Document {
     }
 
     open class var reference: CollectionReference {
-        return db.collection(self.path)
+        return PringDB.collection(self.path)
     }
 
     open class var storageRef: StorageReference {
@@ -557,7 +557,7 @@ open class Object: NSObject, Document {
     }
 
     private func _save(_ batch: WriteBatch? = nil, block: ((DocumentReference?, Error?) -> Void)?) {
-        let batch: WriteBatch = batch ?? Firestore.firestore().batch()
+        let batch: WriteBatch = batch ?? PringDB.batch()
         self.pack(.save, batch: batch).commit { (error) in
             if let error: Error = error {
                 block?(nil, error)
@@ -591,7 +591,7 @@ open class Object: NSObject, Document {
     }
 
     private func _update(_ batch: WriteBatch? = nil, block: ((Error?) -> Void)?) {
-        let batch: WriteBatch = batch ?? Firestore.firestore().batch()
+        let batch: WriteBatch = batch ?? PringDB.batch()
         self.pack(.update, batch: batch).commit { (error) in
             if let error: Error = error {
                 block?(error)
@@ -616,7 +616,7 @@ open class Object: NSObject, Document {
     }
 
     public func delete(_ batch: WriteBatch? = nil, block: ((Error?) -> Void)? = nil) {
-        let batch: WriteBatch = batch ?? Firestore.firestore().batch()
+        let batch: WriteBatch = batch ?? PringDB.batch()
         self.deleteFiles(UUID().uuidString, container: nil) { (error) in
             self.pack(.delete, batch: batch).commit { (error) in
                 if let error = error {

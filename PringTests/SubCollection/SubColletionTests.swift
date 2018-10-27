@@ -79,7 +79,7 @@ class SubColletionTests: XCTestCase {
                         user0.followers.query.dataSource().onCompleted({ (snapshot, _) in
                             let document = snapshot!.documents.first
                             XCTAssertTrue(updatedAt < (document?.data()["updatedAt"] as! Timestamp).dateValue())
-                            let batch = Firestore.firestore().batch()
+                            let batch = PringDB.batch()
                             user0.followers.delete(id: user1.id)
                             user0.update({ (_) in
                                 batch.add(.delete, object: user0)
@@ -313,7 +313,7 @@ class SubColletionTests: XCTestCase {
                         let follwer: User = User()
                         follwer.name = "follow_\(index)"
                         follwer.save { _, _ in
-                            Firestore.firestore().runTransaction({ (transaction, errorPointer) -> Any? in
+                            PringDB.runTransaction({ (transaction, errorPointer) -> Any? in
                                 let userDocument: DocumentSnapshot
                                 let follwerDocument: DocumentSnapshot
                                 do {
@@ -381,7 +381,7 @@ class SubColletionTests: XCTestCase {
                         let follwer: User = User()
                         follwer.name = "follow_\(index)"
                         follwer.save { _, _ in
-                            Firestore.firestore().runTransaction({ (transaction, errorPointer) -> Any? in
+                            PringDB.runTransaction({ (transaction, errorPointer) -> Any? in
                                 let userDocument: DocumentSnapshot
                                 let follwerDocument: DocumentSnapshot
                                 do {

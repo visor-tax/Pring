@@ -16,7 +16,7 @@ public class ReferenceCollection<T: Document>: SubCollection<T> {
 
     @discardableResult
     public override func pack(_ type: BatchType, batch: WriteBatch? = nil) -> WriteBatch {
-        let batch: WriteBatch = batch ?? Firestore.firestore().batch()
+        let batch: WriteBatch = batch ?? PringDB.batch()
         switch type {
         case .save:
             var value: [String: Any] = [:]

@@ -41,7 +41,7 @@ open class SubCollection<T: Document>: AnySubCollection, ExpressibleByArrayLiter
     }
 
     public var reference: CollectionReference {
-        return Firestore.firestore().collection(path)
+        return PringDB.collection(path)
     }
 
     /// It is an Object whose ID is Key.
