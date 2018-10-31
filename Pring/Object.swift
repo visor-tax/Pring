@@ -11,6 +11,7 @@ import FirebaseFirestore
 import FirebaseStorage
 
 public var PringDB: Firestore!
+public var PringStorage : Storage!
 
 open class Object: NSObject, Document {
     
@@ -31,7 +32,7 @@ open class Object: NSObject, Document {
     }
 
     open class var storageRef: StorageReference {
-        return Storage.storage().reference().child(self.path)
+        return PringStorage.storage().reference().child(self.path)
     }
 
     /// If you have a relationship in ReferenceCollection, the value is duplicated.
@@ -42,7 +43,7 @@ open class Object: NSObject, Document {
     public private(set) var reference: DocumentReference
 
     open var storageRef: StorageReference {
-        return Storage.storage().reference().child(self.path)
+        return PringStorage.storage().reference().child(self.path)
     }
 
     public var path: String {
