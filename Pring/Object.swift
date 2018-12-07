@@ -55,21 +55,21 @@ open class Object: NSObject, Document {
 
     @objc public var id: String
 
-    @objc public var createdAt: Date {
+    @objc public var createdAt: Timestamp {
         didSet {
             _createdAt = createdAt
         }
     }
 
-    @objc public var updatedAt: Date {
+    @objc public var updatedAt: Timestamp {
         didSet {
             _updatedAt = updatedAt
         }
     }
 
-    @objc private var _createdAt: Date
+    private var _createdAt: Timestamp
 
-    @objc private var _updatedAt: Date
+    private var _updatedAt: Timestamp
 
     public var batchID: String?
 
@@ -117,8 +117,8 @@ open class Object: NSObject, Document {
 
     /// Initialize Object
     public override required init() {
-        self.createdAt = Date()
-        self.updatedAt = Date()
+        self.createdAt = Timestamp(date: Date())
+        self.updatedAt = Timestamp(date: Date())
         self._createdAt = self.createdAt
         self._updatedAt = self.updatedAt
         self.reference = type(of: self).reference.document()
@@ -158,17 +158,9 @@ open class Object: NSObject, Document {
                                    .withTime,
                                    .withDashSeparatorInDate,
                                    .withColonSeparatorInTime]
-        if let createdAtStr: String = data[(\Object.createdAt)._kvcKeyPathString!] as? String {
-            self.createdAt = formatter.date(from: createdAtStr) ?? _createdAt
-        } else {
-            self.createdAt = data[(\Object.createdAt)._kvcKeyPathString!] as? Date ?? _createdAt
-        }
 
-        if let updatedAtStr: String = data[(\Object.updatedAt)._kvcKeyPathString!] as? String {
-            self.updatedAt = formatter.date(from: updatedAtStr) ?? _updatedAt
-        } else {
-            self.updatedAt = data[(\Object.updatedAt)._kvcKeyPathString!] as? Date ?? _updatedAt
-        }
+        self.createdAt = data[(\Object.createdAt)._kvcKeyPathString!] as? Timestamp ?? Timestamp(date: Date())
+        self.updatedAt = data[(\Object.createdAt)._kvcKeyPathString!] as? Timestamp ?? Timestamp(date: Date())
 
         Mirror(reflecting: self).children.forEach { (key, value) in
             if let key: String = key {
@@ -187,6 +179,7 @@ open class Object: NSObject, Document {
                     case .int           (let key, _, let value):                self.setValue(value, forKey: key)
                     case .float         (let key, _, let value):                self.setValue(value, forKey: key)
                     case .date          (let key, _, let value):                self.setValue(value, forKey: key)
+                    case .timestamp     (let key, _, let value):                self.setValue(value, forKey: key)
                     case .geoPoint      (let key, _, let value):                self.setValue(value, forKey: key)
                     case .dictionary    (let key, _, let value):                self.setValue(value, forKey: key)
                     case .collection    (let key, let value, let collection):   collection.setValue(value, forKey: key)
@@ -207,8 +200,22 @@ open class Object: NSObject, Document {
         self.snapshot = snapshot
     }
 
-    public func set(_ reference: DocumentReference) {
+    public func setReference(_ reference: DocumentReference) {
         self.reference = reference
+        Mirror(reflecting: self).children.forEach { (key, value) in
+            if let key: String = key {
+                if !self.ignore.contains(key) {
+                    switch DataType(key: key, value: value) {
+                    case .file          (let key, _, let value):    value.setParent(self, forKey: key)
+                    case .files         (let key, _, let value):    value.forEach { $0.setParent(self, forKey: key) }
+                    case .collection    (let key, _, let collection):   collection.setParent(self, forKey: key)
+                    case .reference     (let key, _, let reference):    reference.setParent(self, forKey: key)
+                    case .relation      (let key, _, let relation):     relation.setParent(self, forKey: key)
+                    default: break
+                    }
+                }
+            }
+        }
     }
 
     public var snapshot: DocumentSnapshot? {
@@ -222,8 +229,8 @@ open class Object: NSObject, Document {
                     return
                 }
 
-                self.createdAt = (data[(\Object.createdAt)._kvcKeyPathString!] as? Timestamp)?.dateValue() ?? _createdAt
-                self.updatedAt = (data[(\Object.updatedAt)._kvcKeyPathString!] as? Timestamp)?.dateValue() ?? _updatedAt
+                self.createdAt = (data[(\Object.createdAt)._kvcKeyPathString!] as? Timestamp) ?? _createdAt
+                self.updatedAt = (data[(\Object.updatedAt)._kvcKeyPathString!] as? Timestamp) ?? _updatedAt
 
                 Mirror(reflecting: self).children.forEach { (key, value) in
                     if let key: String = key {
@@ -242,6 +249,7 @@ open class Object: NSObject, Document {
                             case .int           (let key, _, let value):                self.setValue(value, forKey: key)
                             case .float         (let key, _, let value):                self.setValue(value, forKey: key)
                             case .date          (let key, _, let value):                self.setValue(value, forKey: key)
+                            case .timestamp     (let key, _, let value):                self.setValue(value, forKey: key)
                             case .geoPoint      (let key, _, let value):                self.setValue(value, forKey: key)
                             case .dictionary    (let key, _, let value):                self.setValue(value, forKey: key)
                             case .collection    (let key, let value, let collection):   collection.setValue(value, forKey: key)
@@ -305,6 +313,7 @@ open class Object: NSObject, Document {
                 case .int           (let key, let rawValue, _):   document[key] = rawValue
                 case .float         (let key, let rawValue, _):   document[key] = rawValue
                 case .date          (let key, let rawValue, _):   document[key] = rawValue
+                case .timestamp     (let key, let rawValue, _):   document[key] = rawValue
                 case .geoPoint      (let key, let rawValue, _):   document[key] = rawValue
                 case .dictionary    (let key, let rawValue, _):   document[key] = rawValue
                 case .collection    (let key, let rawValue, _):   if !rawValue.isEmpty { document[key] = rawValue }
@@ -420,6 +429,7 @@ open class Object: NSObject, Document {
                 case .int           (let key, let updateValue, _):   update(key: key, value: updateValue)
                 case .float         (let key, let updateValue, _):   update(key: key, value: updateValue)
                 case .date          (let key, let updateValue, _):   update(key: key, value: updateValue)
+                case .timestamp     (let key, let updateValue, _):   update(key: key, value: updateValue)
                 case .geoPoint      (let key, let updateValue, _):   update(key: key, value: updateValue)
                 case .dictionary    (let key, let updateValue, _):   update(key: key, value: updateValue)
                 case .collection    (_, _, _):   break

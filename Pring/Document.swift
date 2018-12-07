@@ -39,9 +39,9 @@ public protocol Document: NSObjectProtocol, Hashable, StorageLinkable, Batchable
 
     var value: [String: Any] { get }
 
-    var createdAt: Date { set get }
+    var createdAt: Timestamp { set get }
 
-    var updatedAt: Date { set get }
+    var updatedAt: Timestamp { set get }
 
     var ignore: [String] { get }
 
@@ -57,7 +57,7 @@ public protocol Document: NSObjectProtocol, Hashable, StorageLinkable, Batchable
 
     // MARK:
 
-    func set(_ reference: DocumentReference)
+    func setReference(_ reference: DocumentReference)
 
     @discardableResult
     func save(_ block: ((DocumentReference?, Error?) -> Void)?) -> [String: StorageUploadTask]
