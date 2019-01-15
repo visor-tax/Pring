@@ -108,6 +108,7 @@ open class Object: NSObject, Document {
             switch DataType(key: child.label!, value: child.value) {
             case .file          (let key, _, let file):         file.setParent(self, forKey: key)
             case .collection    (let key, _, let collection):   collection.setParent(self, forKey: key)
+            case .list          (let key, _, let list):         list.setParent(self, forKey: key)
             case .reference     (let key, _, let reference):    reference.setParent(self, forKey: key)
             case .relation      (let key, _, let relation):     relation.setParent(self, forKey: key)
             default: break
@@ -183,11 +184,12 @@ open class Object: NSObject, Document {
                     case .geoPoint      (let key, _, let value):                self.setValue(value, forKey: key)
                     case .dictionary    (let key, _, let value):                self.setValue(value, forKey: key)
                     case .collection    (let key, let value, let collection):   collection.setValue(value, forKey: key)
+                    case .list          (let key, _, let list):                 list.setParent(self, forKey: key)
                     case .reference     (let key, _, let reference):            reference.setParent(self, forKey: key)
                     case .relation      (let key, _, let relation):             relation.setParent(self, forKey: key)
                     case .document      (_, _, _):                              break
                     case .string        (let key, _, let value):                self.setValue(value, forKey: key)
-                    case .null: break
+                    case .unknown: break
                     }
                 }
             }
@@ -209,6 +211,7 @@ open class Object: NSObject, Document {
                     case .file          (let key, _, let value):    value.setParent(self, forKey: key)
                     case .files         (let key, _, let value):    value.forEach { $0.setParent(self, forKey: key) }
                     case .collection    (let key, _, let collection):   collection.setParent(self, forKey: key)
+                    case .list          (let key, _, let list):         list.setParent(self, forKey: key)
                     case .reference     (let key, _, let reference):    reference.setParent(self, forKey: key)
                     case .relation      (let key, _, let relation):     relation.setParent(self, forKey: key)
                     default: break
@@ -253,11 +256,12 @@ open class Object: NSObject, Document {
                             case .geoPoint      (let key, _, let value):                self.setValue(value, forKey: key)
                             case .dictionary    (let key, _, let value):                self.setValue(value, forKey: key)
                             case .collection    (let key, let value, let collection):   collection.setValue(value, forKey: key)
+                            case .list          (let key, _, let list):                 list.setParent(self, forKey: key)
                             case .reference     (let key, _, let reference):            reference.setParent(self, forKey: key)
                             case .relation      (let key, _, let relation):             relation.setParent(self, forKey: key)
                             case .document      (_, _, _):                              break
                             case .string        (let key, _, let value):                self.setValue(value, forKey: key)
-                            case .null: break
+                            case .unknown: break
                             }
                         }
                     }
@@ -317,11 +321,12 @@ open class Object: NSObject, Document {
                 case .geoPoint      (let key, let rawValue, _):   document[key] = rawValue
                 case .dictionary    (let key, let rawValue, _):   document[key] = rawValue
                 case .collection    (let key, let rawValue, _):   if !rawValue.isEmpty { document[key] = rawValue }
+                case .list          (let key, let rawValue, _):   document[key] = rawValue
                 case .reference     (let key, let rawValue, _):   document[key] = rawValue
                 case .relation      (let key, let rawValue, _):   document[key] = rawValue
                 case .string        (let key, let rawValue, _):   document[key] = rawValue
                 case .document      (let key, let rawValue, _):   document[key] = rawValue
-                case .null: break
+                case .unknown: break
                 }
             }
         }
@@ -433,11 +438,12 @@ open class Object: NSObject, Document {
                 case .geoPoint      (let key, let updateValue, _):   update(key: key, value: updateValue)
                 case .dictionary    (let key, let updateValue, _):   update(key: key, value: updateValue)
                 case .collection    (_, _, _):   break
+                case .list          (_, _, _):   break
                 case .reference     (_, _, _):   break
                 case .relation      (_, _, _):   break
                 case .document      (let key, let updateValue, _):   update(key: key, value: updateValue)
                 case .string        (let key, let updateValue, _):   update(key: key, value: updateValue)
-                case .null: break
+                case .unknown: break
                 }
             } else {
                 update(key: keyPath, value: NSNull())
@@ -478,41 +484,51 @@ open class Object: NSObject, Document {
                 if let value = value {
                     switch DataType(key: key, value: value) {
                     case .collection(_, _, let collection):
-                        collection.pack(.save, batch: batch)
+                        collection.pack(type, batch: batch)
                     case .reference(_, _, let reference):
                         if reference is Batchable {
-                            (reference as! Batchable).pack(.save, batch: batch)
+                            (reference as! Batchable).pack(type, batch: batch)
                         }
                     case .relation(_, _, let relation):
                         if relation is Batchable {
-                            (relation as! Batchable).pack(.save, batch: batch)
+                            (relation as! Batchable).pack(type, batch: batch)
                         }
                     default: break
                     }
                 }
             })
         case .update:
-            if !updateValue.isEmpty {
-                updateValue[(\Object.updatedAt)._kvcKeyPathString!] = FieldValue.serverTimestamp()
-                batch.updateData(updateValue, forDocument: self.reference)
-            }
+            var updateValue: [String: Any] = self.updateValue
             self._properties.forEach({ (key, value) in
                 if let value = value {
                     switch DataType(key: key, value: value) {
                     case .collection(_, _, let collection):
-                        collection.pack(.update, batch: batch)
+                        collection.pack(type, batch: batch)
+                    case .list(let key, _, let list):
+                        let listUpdateValue: [String: Any] = list.updateValue
+                        if !listUpdateValue.isEmpty {
+                            updateValue[key] = list.updateValue
+                        }
                     case .reference(_, _, let reference):
                         if reference is Batchable {
-                            (reference as! Batchable).pack(.update, batch: batch)
+                            (reference as! Batchable).pack(type, batch: batch)
                         }
                     case .relation(_, _, let relation):
                         if relation is Batchable {
-                            (relation as! Batchable).pack(.update, batch: batch)
+                            (relation as! Batchable).pack(type, batch: batch)
                         }
                     default: break
                     }
                 }
             })
+            if self.isSaved {
+                if !updateValue.isEmpty {
+                    updateValue[(\Object.updatedAt)._kvcKeyPathString!] = FieldValue.serverTimestamp()
+                    batch.setData(updateValue, forDocument: self.reference, merge: true)
+                }
+            } else {
+                batch.setData(self.value , forDocument: self.reference)
+            }
         case .delete:
             batch.deleteDocument(self.reference)
         }

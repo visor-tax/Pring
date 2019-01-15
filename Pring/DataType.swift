@@ -37,7 +37,8 @@ public enum DataType {
     case relation   (String, String?, AnyRelation)
     case string     (String, String, String)
     case document   (String, [String: Any], Object?)
-    case null
+    case list       (String, [String: Any], AnyList)
+    case unknown
 
     /**
      Encode to firestore data type
@@ -46,7 +47,7 @@ public enum DataType {
      */
     public init(key: String, value: Any?) {
         guard let value = value else {
-            self = .null
+            self = .unknown
             return
         }
 
@@ -150,6 +151,11 @@ public enum DataType {
                 self = .file(key, value.value, value)
                 return
             }
+        case is AnyList:
+            if let value: AnyList = value as? AnyList {
+                self = .list(key, value.value, value)
+                return
+            }
         case is AnySubCollection:
             if let value: AnySubCollection = value as? AnySubCollection {
                 self = .collection(key, [:], value)
@@ -176,11 +182,11 @@ public enum DataType {
                 return
             }
         default:
-            self = .null
+            self = .unknown
             //print("[Pring.Base] This property(\(key) is null", value, String(describing: type(of: value)))
             return
         }
-        self = .null
+        self = .unknown
     }
 
     /**
@@ -191,6 +197,47 @@ public enum DataType {
         let subjectType: Any.Type = mirror.subjectType
 
         DataType.verify(value: value)
+
+        if value is AnySubCollection {
+            let collection: AnySubCollection = value as! AnySubCollection
+            if let value: [String: Any] = data[key] as? [String: Any] {
+                self = .collection(key, value, collection)
+                return
+            }
+        } else if value is AnyList {
+            if let object: [String: Any] = data[key] as? [String: Any] {
+                let list: AnyList = value as! AnyList
+                list.setValue(object)
+                self = .list(key, object, list)
+                return
+            }
+        } else if value is AnyReference {
+            if let documentReference: DocumentReference = data[key] as? DocumentReference {
+                var reference: AnyReference = value as! AnyReference
+                reference.documentReference = documentReference
+                self = .reference(key, documentReference, reference)
+                return
+            }
+        } else if value is AnyRelation {
+            if let id: String = data[key] as? String {
+                var relation: AnyRelation = value as! AnyRelation
+                relation.id = id
+                self = .relation(key, id, relation)
+                return
+            }
+        } else if value is Object {
+            if let rawValue: [String: Any] = data[key] as? [String: Any] {
+                self = .document(key, rawValue, nil)
+                return
+            }
+        } else if value is [String: Any] {
+            if let value: [String: Any] = data[key] as? [String: Any] {
+                self = .dictionary(key, value, value)
+                return
+            }
+        } else {
+            self = .unknown
+        }
 
         if subjectType == Bool.self {
             if let value: Bool = data[key] as? Bool {
@@ -332,40 +379,7 @@ public enum DataType {
             }
         }
 
-        if value is AnySubCollection {
-            let collection: AnySubCollection = value as! AnySubCollection
-            if let value: [String: Any] = data[key] as? [String: Any] {
-                self = .collection(key, value, collection)
-                return
-            }
-        } else if value is AnyReference {
-            if let documentReference: DocumentReference = data[key] as? DocumentReference {
-                var reference: AnyReference = value as! AnyReference
-                reference.documentReference = documentReference
-                self = .reference(key, documentReference, reference)
-                return
-            }
-        } else if value is AnyRelation {
-            if let id: String = data[key] as? String {
-                var relation: AnyRelation = value as! AnyRelation
-                relation.id = id
-                self = .relation(key, id, relation)
-                return
-            }
-        } else if value is Object {
-            if let rawValue: [String: Any] = data[key] as? [String: Any] {
-                self = .document(key, rawValue, nil)
-                return
-            }
-        } else if value is [String: Any] {
-            if let value: [String: Any] = data[key] as? [String: Any] {
-                self = .dictionary(key, value, value)
-                return
-            }
-        } else {
-            self = .null
-        }
-        self = .null
+        self = .unknown
     }
 
     static func verify(value: Any) {
